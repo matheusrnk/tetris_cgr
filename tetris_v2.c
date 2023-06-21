@@ -1,4 +1,4 @@
-// gcc tetris.c -lglut -lGL -lGLU -lm -o tetris && ./tetris
+// gcc tetris_v2.c -lglut -lGL -lGLU -lm -o tetris_v2 && ./tetris_v2
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +50,64 @@ int board[BOARD_WIDTH][BOARD_HEIGHT];
 
 #define WINDOW_WIDTH  500
 #define WINDOW_HEIGHT 640
+
+#define MTETRO_SIZE 4
+/**
+ * @brief Desenho das peças em forma matricial
+ * para inserí-las no tabuleiro
+*/
+int MTETRO_I[MTETRO_SIZE][MTETRO_SIZE] = {
+    {0, 1, 0, 0},
+    {0, 1, 0, 0},
+    {0, 1, 0, 0},
+    {0, 1, 0, 0}
+};
+
+int MTETRO_SQR[MTETRO_SIZE][MTETRO_SIZE] = {
+    {0, 0, 0, 0},
+    {0, 2, 2, 0},
+    {0, 2, 2, 0},
+    {0, 0, 0, 0}
+};
+
+int MTETRO_LL[MTETRO_SIZE][MTETRO_SIZE] = {
+    {0, 0, 0, 3},
+    {0, 0, 0, 3},
+    {0, 0, 3, 3},
+    {0, 0, 0, 0}
+};
+
+int MTETRO_LR[MTETRO_SIZE][MTETRO_SIZE] = {
+    {4, 0, 0, 0},
+    {4, 0, 0, 0},
+    {4, 4, 0, 0},
+    {0, 0, 0, 0}
+};
+
+int MTETRO_SL[MTETRO_SIZE][MTETRO_SIZE] = {
+    {0, 5, 5, 0},
+    {0, 0, 5, 5},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0}
+};
+
+int MTETRO_SR[MTETRO_SIZE][MTETRO_SIZE] = {
+    {0, 6, 6, 0},
+    {6, 6, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0}
+};
+
+int MTETRO_T[MTETRO_SIZE][MTETRO_SIZE] = {
+    {7, 7, 7, 0},
+    {0, 7, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0}
+};
+
+int *M_TETROMINOS[] = {MTETRO_I, MTETRO_SQR, MTETRO_LL, 
+                        MTETRO_LR, MTETRO_SL, MTETRO_SR, 
+                        MTETRO_T};
 
 /**
  * @brief Possíveis estados dos tetrominos
@@ -183,6 +241,24 @@ void imprimeTabuleiroAtual(){
         printf("]\n");
     }
     printf("\n");
+}
+
+void rotateMatrix(int matrix[MTETRO_SIZE][MTETRO_SIZE]) {
+    int temp[MTETRO_SIZE][MTETRO_SIZE];
+
+    // Copy the original matrix to a temporary matrix
+    for (int i = 0; i < MTETRO_SIZE; i++) {
+        for (int j = 0; j < MTETRO_SIZE; j++) {
+            temp[i][j] = matrix[i][j];
+        }
+    }
+
+    // Perform the rotation
+    for (int i = 0; i < MTETRO_SIZE; i++) {
+        for (int j = 0; j < MTETRO_SIZE; j++) {
+            matrix[i][j] = temp[MTETRO_SIZE - j - 1][i];
+        }
+    }
 }
 
 /**
@@ -495,10 +571,14 @@ void drawInterface(){
     drawLevelCounterOnBox();
 }
 
+void doTetrominoRotation(){
+    rotateMatrix(M_TETROMINOS[currentTetromino-1]);
+}
+
 void SpecialKeys(int key, int x, int y){  
 
     if(key == GLUT_KEY_UP)
-        xRot -= 5.0f;
+        doTetrominoRotation();
     
     if(key == GLUT_KEY_DOWN)
         mvpeca_y -= BLOCK_SIZE;
@@ -574,33 +654,56 @@ void drawBlocksOnBoard(){
     }
 }
 
+void drawTetromino(int x, int y, const int tetro[MTETRO_SIZE][MTETRO_SIZE]){
+    const GLfloat *cores[] = {LIGHT_BLUE, YELLOW, ORANGE, BLUE, GREEN, RED, PURPLE};
+    for(int i = 0; i < MTETRO_SIZE; i++){
+        for(int j = 0; j < MTETRO_SIZE; j++){
+            if(tetro[i][j] != 0) drawBlock(x + (j * BLOCK_SIZE), y - (i * BLOCK_SIZE), cores[tetro[i][j]-1]);
+        }
+    }
+}
+
+int verifiesTetrominoSize(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
+    int size = 0;
+    for(int i = 0; i < MTETRO_SIZE; i++){
+        for(int j = 0; j < MTETRO_SIZE; j++){
+            if(tetro[i][j] != 0){ size++; continue; }
+        }
+    }
+    return size;
+}
+
 void drawCurrentTetromino(){
-    int x = (((BOARD_WIDTH + 2)/2) * BLOCK_SIZE) - BLOCK_SIZE;
+    int x = (BOARD_WIDTH/2) * BLOCK_SIZE;
     int pos_x = x + mvpeca_x;
     int pos_y;
     switch (currentTetromino){
         case TETRO_I:
-            pos_y = (BOARD_HEIGHT + 2) * BLOCK_SIZE - (BLOCK_SIZE * 5) + mvpeca_y;
+            pos_y = BOARD_HEIGHT * BLOCK_SIZE + mvpeca_y;
             printf("pos_x = %d\n", pos_x);
             printf("pos_y = %d\n", pos_y);
 
-            if(pos_y >= BLOCK_SIZE){
-                if(pos_x <= 0){
-                    pos_x = BLOCK_SIZE;
+            printf("size = %d\n", verifiesTetrominoSize(MTETRO_I));
+
+            if(pos_y >= verifiesTetrominoSize(MTETRO_I) * BLOCK_SIZE){
+                if(pos_x <= -20){
+                    pos_x = 0;
                     mvpeca_x += BLOCK_SIZE;
-                } else if(pos_x >= (BOARD_WIDTH+1) * BLOCK_SIZE){
-                    pos_x = (BOARD_WIDTH) * BLOCK_SIZE;
+                } else if(pos_x >= BOARD_WIDTH * BLOCK_SIZE){
+                    pos_x = (BOARD_WIDTH-1) * BLOCK_SIZE;
                     mvpeca_x -= BLOCK_SIZE;
                 }
-                drawTetrominoI(pos_x, pos_y); 
+                //drawTetrominoI(pos_x, pos_y);
+                drawTetromino(pos_x, pos_y, MTETRO_I);
             } else {
                 for(int i = (pos_y/BLOCK_SIZE) + (BOARD_HEIGHT-1); i > (pos_y/BLOCK_SIZE) + (BOARD_HEIGHT-1) - 4; i--){
                     board[i][(pos_x-BLOCK_SIZE)/BLOCK_SIZE] = B_LIGHTBLUE;
                 }
+                //preciso resetar a matriz do objeto para o seu estado inicial tbm
                 drawBlocksOnBoard();
                 currentTetromino = INIT_STATE;
                 mvpeca_x = 0;
-                mvpeca_y = 0;
+                mvpeca_y = BLOCK_SIZE;
             }
             break;
         case TETRO_SQR:
@@ -624,7 +727,7 @@ void drawCurrentTetromino(){
                 drawBlocksOnBoard();
                 currentTetromino = INIT_STATE;
                 mvpeca_x = 0;
-                mvpeca_y = 0;
+                mvpeca_y = BLOCK_SIZE;
             }
             break;
         case TETRO_LL:
@@ -654,7 +757,7 @@ void drawCurrentTetromino(){
 
 void initGame(){
 
-    currentTetromino = /*chooseRandomTetro()*/2;
+    currentTetromino = /*chooseRandomTetro()*/1;
     nextTetromino    = chooseRandomTetro();
     
 
