@@ -8,6 +8,9 @@
 #define TRUE 1
 #define FALSE 0
 
+#define NOT_PRESSED 2
+#define PRESSED 1
+
 /**
  * @brief Tamanho do tabuleiro
  * 
@@ -802,6 +805,8 @@ void runsThirdCheck(int tetro){
     }
 }
 
+int isKeyPressed = NOT_PRESSED; //TRUE - 1, FALSE - 2;
+
 void SpecialKeys(int key, int x, int y){  
 
     if(key == GLUT_KEY_UP){
@@ -822,6 +827,8 @@ void SpecialKeys(int key, int x, int y){
         pot_current_tetro_col++;
         runsSecondCheck(currentTetromino);
     }
+
+    isKeyPressed = PRESSED;
 
     // Refresh the Window
     glutPostRedisplay();  
@@ -847,8 +854,15 @@ void display() {
 
     initGame();
 
-    pot_current_tetro_line++;
-    glutTimerFunc(150, display, 0);
+    if(isKeyPressed == NOT_PRESSED){
+        pot_current_tetro_line++;
+        glutTimerFunc(250, display, 0);
+    } else {
+        /*pot_current_tetro_line = current_tetro_line;*/
+        updatePotentialPointer();
+    }
+
+    isKeyPressed = NOT_PRESSED;
 
     glFlush();
 }
