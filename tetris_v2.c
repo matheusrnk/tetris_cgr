@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 #include <GL/glut.h>
 
 #define TRUE 1
@@ -183,6 +184,7 @@ const int d2[] = {260, 200};
 const int d3[] = {200, 120};
 const int d4[] = {200, 160};
 const int d5[] = {200, 100};
+const int d6[] = {260, 140};
 #define BOTTOM_RIGHT_COMPONENT_DIMENSIONS d0
 #define TOP_LEFT_COMPONENT_DIMENSIONS d1
 #define TOP_RIGHT_COMPONENT_DIMENSIONS d2
@@ -190,6 +192,7 @@ const int d5[] = {200, 100};
 #define NEXT_BOX_DIMENSIONS d4
 #define LINE_BOX_DIMENSIONS d5
 #define LEVEL_BOX_DIMENSIONS d5
+#define GAMEOVER_BOX_DIMENSIONS d6
 
 /**
  * @brief Espaçamento do texto
@@ -567,16 +570,6 @@ void landTetrominoOnBoard(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
     }
 }
 
-void clearWhereTetrominoWasLanded(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
-    for(int i = 0; i < MTETRO_SIZE; i++){
-        for(int j = 0; j < MTETRO_SIZE; j++){
-            if(tetro[i][j] != 0){
-                board[i+(current_tetro_line-1)][j+current_tetro_col+1] = 0;
-            }
-        }
-    }
-}
-
 void resetPointer(){
     pot_current_tetro_line = 1;
     pot_current_tetro_col  = 3;
@@ -656,6 +649,12 @@ void updateTetroWithSafeCopy(int tetro){
     }
 }
 
+void drawGameOverBox(){
+    GLuint position[] = {(BOARD_WIDTH - 5) * BLOCK_SIZE + 30, (BOARD_HEIGHT - 5) * BLOCK_SIZE - 90};
+    drawRectangle((BOARD_WIDTH - 5) * BLOCK_SIZE, (BOARD_HEIGHT - 5) * BLOCK_SIZE - 150, GAMEOVER_BOX_DIMENSIONS, RED);
+    drawText("GAME OVER!", GLUT_BITMAP_TIMES_ROMAN_24, position, WHITE);
+}
+
 void verifyGameOver(){
     int countBlock = 0;
     for(int row = 0; row < BOARD_HEIGHT; row++){
@@ -667,13 +666,46 @@ void verifyGameOver(){
         }
     }
     if(countBlock == BOARD_HEIGHT){
-        printf("GAME OVER!");
-        exit(0);
+        drawGameOverBox();
+        glFlush();
+        sleep(3);
+        glutDestroyWindow(glutGetWindow());
+    }
+}
+
+void updateScore(int linesBroke){
+    int base_score = 0;
+    switch (linesBroke){
+        case 0:  base_score = 0;    break;
+        case 1:  base_score = 40;   break;
+        case 2:  base_score = 100;  break;
+        case 3:  base_score = 300;  break;
+        default: base_score = 1200; break;
+    }
+    score_counter += base_score * (level_counter + 1) * (line_counter + 1);
+}
+
+void updateLineCounter(int linesBroke){
+    int base_line = 0;
+    switch (linesBroke){
+        case 0:  base_line = 0; break;
+        case 1:  base_line = 1; break;
+        case 2:  base_line = 2; break;
+        default: base_line = 3; break;
+    }
+    if(base_line == 0) line_counter = 0;
+    else if(base_line + line_counter >= 10) line_counter = 10;
+    else line_counter += base_line;
+}
+
+void updateLevelCounter(){
+    if(line_counter >= 5){
+        level_counter++;
     }
 }
 
 void lineBreak(){
-    int countBlock = 0;
+    int linesBroke = 0;
     int col,row;
     for(row = 0; row < BOARD_HEIGHT; row++){
         for(col = 0; col < BOARD_WIDTH; col++){
@@ -690,8 +722,12 @@ void lineBreak(){
                     board[i][j] = board[i-1][j];
                 }
             }
+            linesBroke++;
         }
     }
+    updateLineCounter(linesBroke);
+    updateLevelCounter();
+    updateScore(linesBroke);
 }
 
 void firstCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
@@ -703,6 +739,8 @@ void firstCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
                     landTetrominoOnBoard(tetro);
                     resetPointer();
 
+                    lineBreak();
+
                     updateTetroWithSafeCopy(currentTetromino);
                     currentTetromino = nextTetromino;
                     nextTetromino = chooseRandomTetro();
@@ -710,6 +748,8 @@ void firstCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
                     //LAND PIECE
                     landTetrominoOnBoard(tetro);
                     resetPointer();
+
+                    lineBreak();
 
                     updateTetroWithSafeCopy(currentTetromino);
                     currentTetromino = nextTetromino;
@@ -721,7 +761,6 @@ void firstCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
     updateCurrentPointer();
     drawCurrentTetromino();
     imprimeTabuleiroAtual();
-    lineBreak();
     verifyGameOver();
 }
 
