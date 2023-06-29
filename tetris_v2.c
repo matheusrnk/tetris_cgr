@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <GL/glut.h>
 
 #define TRUE 1
@@ -27,7 +28,7 @@ unsigned long score_counter = 0; //MAX 10
 int line_counter  = 0;
 int level_counter = 0;
 
-int board[BOARD_WIDTH][BOARD_HEIGHT];
+int board[BOARD_HEIGHT][BOARD_WIDTH];
 
 /**
  * 
@@ -234,6 +235,8 @@ static const GLfloat c9[] = {1.0f, 1.0f, 1.0f};
  * @return int valor do tetromino
  */
 static int chooseRandomTetro(){
+    time_t t;
+    srand((unsigned) time(&t));
     return (rand() % (TETRO_T - TETRO_I + 1)) + TETRO_I;
 }
 
@@ -653,6 +656,44 @@ void updateTetroWithSafeCopy(int tetro){
     }
 }
 
+void verifyGameOver(){
+    int countBlock = 0;
+    for(int row = 0; row < BOARD_HEIGHT; row++){
+        for(int col = 0; col < BOARD_WIDTH; col++){
+            if( board[row][col] != 0 ){
+                countBlock++;
+                break;
+            }
+        }
+    }
+    if(countBlock == BOARD_HEIGHT){
+        printf("GAME OVER!");
+        exit(0);
+    }
+}
+
+void lineBreak(){
+    int countBlock = 0;
+    int col,row;
+    for(row = 0; row < BOARD_HEIGHT; row++){
+        for(col = 0; col < BOARD_WIDTH; col++){
+            if( board[row][col] == 0 ){
+                break;
+            }
+        }
+        if(col==BOARD_WIDTH){//percorreu a linha toda com algum elemento diferente de 0
+            for(int i=row;i>0;i--){
+                for(int j=0;j< BOARD_WIDTH;j++){
+                    if(i==0){
+                        board[i][j] = 0;
+                    }
+                    board[i][j] = board[i-1][j];
+                }
+            }
+        }
+    }
+}
+
 void firstCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
     for(int row = 0; row < MTETRO_SIZE; row++){
         for(int col = 0; col < MTETRO_SIZE; col++){
@@ -680,6 +721,8 @@ void firstCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
     updateCurrentPointer();
     drawCurrentTetromino();
     imprimeTabuleiroAtual();
+    lineBreak();
+    verifyGameOver();
 }
 
 void secondCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
