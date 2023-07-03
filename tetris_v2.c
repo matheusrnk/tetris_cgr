@@ -7,6 +7,13 @@
 #include <unistd.h>
 #include <GL/glut.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_PNG
+#include "stb_image.h"
+
+GLuint texture;
+int imageWidth, imageHeight, imageChannels;
+
 #define TRUE 1
 #define FALSE 0
 
@@ -232,6 +239,8 @@ static const GLfloat c9[] = {1.0f, 1.0f, 1.0f};
  */
 #define BLOCK_SIZE 20
 
+int timeBased = TRUE;
+
 /**
  * @brief Escolhe um tetromino aleatorio
  * 
@@ -239,7 +248,9 @@ static const GLfloat c9[] = {1.0f, 1.0f, 1.0f};
  */
 static int chooseRandomTetro(){
     time_t t;
-    srand((unsigned) time(&t));
+    if(timeBased) { 
+        srand((unsigned) time(&t)); timeBased = FALSE; 
+    } else timeBased = TRUE;
     return (rand() % (TETRO_T - TETRO_I + 1)) + TETRO_I;
 }
 
@@ -389,9 +400,33 @@ void drawText(char *text, void *font, GLuint *position, const GLfloat *color){
  * @attention Esta função ainda está em construção.
  * Ou seja, isto é apenas um placeholder
  */
-void drawLogo(){
+/*void drawLogo(){
     GLuint position[] = {(BOARD_WIDTH + 2) * BLOCK_SIZE + 90, (BOARD_HEIGHT + 2) * BLOCK_SIZE + 100};
     drawText("LOGO", GLUT_BITMAP_TIMES_ROMAN_24, position, WHITE);
+}*/
+
+void drawLogo(){
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    int posX = BLOCK_SIZE * 4;
+    int posY = BLOCK_SIZE * 4;
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(0, 0);
+    glVertex2f(-posX + (BLOCK_SIZE * (BOARD_WIDTH + 8.5)), -posY + (BLOCK_SIZE * (BOARD_HEIGHT + 6.5)));
+
+    glTexCoord2f(1, 0);
+    glVertex2f(posX + (BLOCK_SIZE * (BOARD_WIDTH + 8.5)), -posY + (BLOCK_SIZE * (BOARD_HEIGHT + 6.5)));
+
+    glTexCoord2f(1, 1);
+    glVertex2f(posX  + (BLOCK_SIZE * (BOARD_WIDTH + 8.5) ) , posY + (BLOCK_SIZE * (BOARD_HEIGHT + 6.5)));
+
+    glTexCoord2f(0, 1);
+    glVertex2f(-posX + (BLOCK_SIZE * (BOARD_WIDTH + 8.5)), posY + (BLOCK_SIZE * (BOARD_HEIGHT + 6.5)));
+    glEnd();
+
+    glDisable(GL_TEXTURE_2D);
 }
 
 /**
@@ -598,9 +633,9 @@ void drawCurrentTetromino(){
     int x = (((BOARD_WIDTH)/2) * BLOCK_SIZE) - (4 * BLOCK_SIZE);
     int mvpeca_x = current_tetro_col * BLOCK_SIZE;
     int mvpeca_y = current_tetro_line * BLOCK_SIZE;
-    printf("mvpeca_x = %d\n", mvpeca_x);
-    printf("mvpeca_y = %d\n", mvpeca_y);
-    printf("current_line = %d\n", current_tetro_line);
+    //printf("mvpeca_x = %d\n", mvpeca_x);
+    //printf("mvpeca_y = %d\n", mvpeca_y);
+    //printf("current_line = %d\n", current_tetro_line);
     switch (currentTetromino){
         case TETRO_I:
             drawTetromino(x + mvpeca_x, (BOARD_HEIGHT + 2) * BLOCK_SIZE - BLOCK_SIZE - mvpeca_y, MTETRO_I);
@@ -666,6 +701,7 @@ void verifyGameOver(){
         }
     }
     if(countBlock == BOARD_HEIGHT){
+        drawBlocksOnBoard();
         drawGameOverBox();
         glFlush();
         sleep(3);
@@ -760,7 +796,7 @@ void firstCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
     }
     updateCurrentPointer();
     drawCurrentTetromino();
-    imprimeTabuleiroAtual();
+    //imprimeTabuleiroAtual();
     verifyGameOver();
 }
 
@@ -790,7 +826,7 @@ void secondCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
     }
     updateCurrentPointer();
     drawCurrentTetromino();
-    imprimeTabuleiroAtual();
+    //imprimeTabuleiroAtual();
 }
 
 void thirdCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
@@ -840,7 +876,7 @@ void thirdCheck(int tetro[MTETRO_SIZE][MTETRO_SIZE]){
     rotateMatrix(tetro);
     updateCurrentPointer();
     drawCurrentTetromino();
-    imprimeTabuleiroAtual();
+    //imprimeTabuleiroAtual();
 
     //se ok, rotaciona a matriz original
     //se nao, so mantem o estado original da matriz
@@ -933,6 +969,7 @@ void display() {
     // Call the function to draw the tetromino
     drawBoard();
     drawInterface();
+    drawLogo();
 
     initGame();
 
@@ -947,6 +984,22 @@ void display() {
     isKeyPressed = NOT_PRESSED;
 
     glFlush();
+}
+
+void loadImageTexture()
+{
+    unsigned char* image = stbi_load("logo_tetris.png", &imageWidth, &imageHeight, &imageChannels, STBI_rgb_alpha);
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+    stbi_image_free(image);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 // Function to handle window resizing
@@ -972,12 +1025,16 @@ int main(int argc, char** argv) {
     currentTetromino = chooseRandomTetro();
     nextTetromino = chooseRandomTetro();
 
+    loadImageTexture();
+
     // Register callback functions
     glutReshapeFunc(reshape);
     glutSpecialFunc(SpecialKeys);
     glutDisplayFunc(display);
 
     glutMainLoop();
+
+    glDeleteTextures(1, &texture);
 
     return 0;
 }
