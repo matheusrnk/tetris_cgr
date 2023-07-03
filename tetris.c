@@ -1,4 +1,4 @@
-// gcc tetris_v2.c -lglut -lGL -lGLU -lm -o tetris_v2 && ./tetris_v2
+// gcc tetris.c -lglut -lGL -lGLU -lm -o tetris && ./tetris
 
 #include <stdio.h>
 #include <stdlib.h>
