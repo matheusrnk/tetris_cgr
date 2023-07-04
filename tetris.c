@@ -988,7 +988,7 @@ void display() {
 
 void loadImageTexture()
 {
-    unsigned char* image = stbi_load("logo_tetris.png", &imageWidth, &imageHeight, &imageChannels, STBI_rgb_alpha);
+    unsigned char* image = stbi_load("logo&icon/logo_tetris.png", &imageWidth, &imageHeight, &imageChannels, STBI_rgb_alpha);
 
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
